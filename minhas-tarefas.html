@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Minhas Tarefas">
+<meta name="theme-color" content="#1a1a2e">
+<title>Minhas Tarefas</title>
+<style>
+  :root {
+    --urgent: #e63946;
+    --urgent-light: #fde8ea;
+    --urgent-dark: #9b1724;
+    --important: #f4a261;
+    --important-light: #fff0e0;
+    --important-dark: #a05c1a;
+    --later: #2a9d8f;
+    --later-light: #e0f5f3;
+    --later-dark: #1a6b62;
+    --bg: #f8f9fc;
+    --surface: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --header-bg: #1a1a2e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overscroll-behavior: none;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--header-bg);
+    color: white;
+    padding: 56px 20px 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .header-sub {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+  .add-btn {
+    background: white;
+    color: var(--header-bg);
+    border: none;
+    border-radius: 50px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.1s, opacity 0.1s;
+    white-space: nowrap;
+  }
+  .add-btn:active { transform: scale(0.96); opacity: 0.85; }
+
+  /* FILTER TABS */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .filter-bar::-webkit-scrollbar { display: none; }
+  .filter-tab {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .filter-tab.all { background: #f0f1f5; color: var(--text); border-color: #d1d5db; }
+  .filter-tab.all.active { background: var(--header-bg); color: white; border-color: var(--header-bg); }
+  .filter-tab.urgente { background: var(--urgent-light); color: var(--urgent-dark); border-color: #fbb7bc; }
+  .filter-tab.urgente.active { background: var(--urgent); color: white; border-color: var(--urgent); }
+  .filter-tab.importante { background: var(--important-light); color: var(--important-dark); border-color: #fdd5a8; }
+  .filter-tab.importante.active { background: var(--important); color: white; border-color: var(--important); }
+  .filter-tab.depois { background: var(--later-light); color: var(--later-dark); border-color: #a8ddd8; }
+  .filter-tab.depois.active { background: var(--later); color: white; border-color: var(--later); }
+  .count-badge {
+    background: rgba(255,255,255,0.3);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .filter-tab:not(.active) .count-badge {
+    background: rgba(0,0,0,0.1);
+  }
+
+  /* TASK LIST */
+  .content {
+    padding: 16px;
+    padding-bottom: 40px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin: 16px 0 8px 4px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 15px; line-height: 1.5; }
+
+  /* TASK CARD */
+  .task-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border-left: 4px solid transparent;
+    position: relative;
+    transition: transform 0.15s, opacity 0.2s;
+  }
+  .task-card.urgente { border-left-color: var(--urgent); }
+  .task-card.importante { border-left-color: var(--important); }
+  .task-card.depois { border-left-color: var(--later); }
+  .task-card.done { opacity: 0.5; }
+  .task-card.done .task-title { text-decoration: line-through; color: var(--text-muted); }
+
+  .task-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #d1d5db;
+    flex-shrink: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+    transition: all 0.15s;
+    background: white;
+  }
+  .task-card.urgente .task-checkbox { border-color: var(--urgent); }
+  .task-card.importante .task-checkbox { border-color: var(--important); }
+  .task-card.depois .task-checkbox { border-color: var(--later); }
+  .task-card.done .task-checkbox { background: #d1d5db; border-color: #d1d5db; }
+  .task-checkbox svg { display: none; }
+  .task-card.done .task-checkbox svg { display: block; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-title { font-size: 15px; font-weight: 500; line-height: 1.4; word-break: break-word; }
+  .task-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .task-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .task-badge.urgente { background: var(--urgent-light); color: var(--urgent-dark); }
+  .task-badge.importante { background: var(--important-light); color: var(--important-dark); }
+  .task-badge.depois { background: var(--later-light); color: var(--later-dark); }
+  .task-date {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .task-date.overdue { color: var(--urgent); font-weight: 600; }
+
+  .task-delete {
+    background: none;
+    border: none;
+    color: #d1d5db;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 8px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    font-size: 18px;
+    line-height: 1;
+    margin-top: -2px;
+  }
+  .task-delete:active { color: var(--urgent); }
+
+  /* MODAL OVERLAY */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 480px;
+    max-height: 92vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0 env(safe-area-inset-bottom, 20px);
+    animation: slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  .modal-handle {
+    width: 40px;
+    height: 4px;
+    background: #d1d5db;
+    border-radius: 2px;
+    margin: 12px auto 0;
+  }
+  .modal-header {
+    padding: 16px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-title { font-size: 18px; font-weight: 700; }
+  .modal-close {
+    background: #f0f1f5;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* FORM */
+  .form-body { padding: 0 20px 20px; }
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-input {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 13px 14px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+    resize: vertical;
+    min-height: 48px;
+  }
+  .form-input:focus { border-color: #6366f1; background: white; }
+  .form-input::placeholder { color: #c0c4cc; }
+
+  /* URGENCY SELECTOR */
+  .urgency-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .urgency-opt {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: white;
+  }
+  .urgency-opt .uo-icon { font-size: 22px; margin-bottom: 5px; }
+  .urgency-opt .uo-label { font-size: 11px; font-weight: 700; display: block; }
+  .urgency-opt .uo-sub { font-size: 10px; color: var(--text-muted); display: block; margin-top: 2px; }
+  .urgency-opt[data-val="urgente"] .uo-label { color: var(--urgent-dark); }
+  .urgency-opt[data-val="importante"] .uo-label { color: var(--important-dark); }
+  .urgency-opt[data-val="depois"] .uo-label { color: var(--later-dark); }
+  .urgency-opt[data-val="urgente"].selected { border-color: var(--urgent); background: var(--urgent-light); }
+  .urgency-opt[data-val="importante"].selected { border-color: var(--important); background: var(--important-light); }
+  .urgency-opt[data-val="depois"].selected { border-color: var(--later); background: var(--later-light); }
+
+  /* DATE/TIME TOGGLES */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .toggle-row:last-of-type { border-bottom: none; }
+  .toggle-icon { font-size: 18px; }
+  .toggle-text { flex: 1; font-size: 14px; font-weight: 500; }
+  .toggle-switch {
+    width: 44px;
+    height: 26px;
+    background: #d1d5db;
+    border-radius: 13px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-switch.on { background: #6366f1; }
+  .toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  .toggle-switch.on::after { transform: translateX(18px); }
+
+  .datetime-inputs { margin-top: 12px; display: none; }
+  .datetime-inputs.visible { display: block; }
+  .datetime-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* SAVE BUTTON */
+  .save-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--header-bg);
+    color: white;
+    transition: transform 0.1s, opacity 0.1s;
+    margin-top: 4px;
+    letter-spacing: 0.2px;
+  }
+  .save-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .save-btn.urgente { background: var(--urgent); }
+  .save-btn.importante { background: var(--important); }
+  .save-btn.depois { background: var(--later); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-item {
+    flex: 1;
+    text-align: center;
+    padding: 10px 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-right: 1px solid var(--border);
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-num { font-size: 18px; font-weight: 700; display: block; color: var(--text); }
+  .stat-item.urgente .stat-num { color: var(--urgent); }
+  .stat-item.importante .stat-num { color: var(--important); }
+  .stat-item.depois .stat-num { color: var(--later); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>📋 Minhas Tarefas</h1>
+      <div class="header-sub" id="date-display"></div>
+    </div>
+    <button class="add-btn" onclick="openModal()">
+      <span>＋</span> Adicionar
+    </button>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat-item urgente">
+    <span class="stat-num" id="stat-urgente">0</span>
+    🔴 Urgente
+  </div>
+  <div class="stat-item importante">
+    <span class="stat-num" id="stat-importante">0</span>
+    🟡 Importante
+  </div>
+  <div class="stat-item depois">
+    <span class="stat-num" id="stat-depois">0</span>
+    🟢 Pode esperar
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="filter-tab all active" onclick="setFilter('all')">
+    Todas <span class="count-badge" id="count-all">0</span>
+  </div>
+  <div class="filter-tab urgente" onclick="setFilter('urgente')">
+    🔴 Urgente <span class="count-badge" id="count-urgente">0</span>
+  </div>
+  <div class="filter-tab importante" onclick="setFilter('importante')">
+    🟡 Importante <span class="count-badge" id="count-importante">0</span>
+  </div>
+  <div class="filter-tab depois" onclick="setFilter('depois')">
+    🟢 Pode esperar <span class="count-badge" id="count-depois">0</span>
+  </div>
+</div>
+
+<div class="content" id="task-list"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">Nova Tarefa</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-body">
+
+      <div class="form-group">
+        <label class="form-label">📝 Descrição da tarefa</label>
+        <textarea class="form-input" id="task-title" placeholder="O que precisa ser feito?" rows="3"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">⚡ Nível de urgência</label>
+        <div class="urgency-grid">
+          <div class="urgency-opt" data-val="urgente" onclick="selectUrgency('urgente')">
+            <div class="uo-icon">🔴</div>
+            <span class="uo-label">URGENTE</span>
+            <span class="uo-sub">Fazer agora</span>
+          </div>
+          <div class="urgency-opt" data-val="importante" onclick="selectUrgency('importante')">
+            <div class="uo-icon">🟡</div>
+            <span class="uo-label">IMPORTANTE</span>
+            <span class="uo-sub">Fazer em breve</span>
+          </div>
+          <div class="urgency-opt" data-val="depois" onclick="selectUrgency('depois')">
+            <div class="uo-icon">🟢</div>
+            <span class="uo-label">PODE ESPERAR</span>
+            <span class="uo-sub">Sem pressa</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">🗓 Data e hora (opcional)</label>
+        <div class="toggle-row" onclick="toggleDate()">
+          <span class="toggle-icon">📅</span>
+          <span class="toggle-text">Adicionar data</span>
+          <div class="toggle-switch" id="toggle-date"></div>
+        </div>
+        <div class="datetime-inputs" id="date-input-wrap">
+          <input type="date" class="form-input" id="task-date">
+        </div>
+
+        <div class="toggle-row" onclick="toggleTime()">
+          <span class="toggle-icon">⏰</span>
+          <span class="toggle-text">Adicionar horário</span>
+          <div class="toggle-switch" id="toggle-time"></div>
+        </div>
+        <div class="datetime-inputs" id="time-input-wrap">
+          <input type="time" class="form-input" id="task-time">
+        </div>
+      </div>
+
+      <button class="save-btn" id="save-btn" onclick="saveTask()">Salvar Tarefa</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let tasks = [];
+  let currentFilter = 'all';
+  let selectedUrgency = '';
+  let showDate = false;
+  let showTime = false;
+
+  const LABELS = {
+    urgente: '🔴 Urgente',
+    importante: '🟡 Importante',
+    depois: '🟢 Pode esperar'
+  };
+
+  function load() {
+    try {
+      const saved = localStorage.getItem('minhastarefas_v2');
+      if (saved) tasks = JSON.parse(saved);
+    } catch(e) { tasks = []; }
+  }
+
+  function save() {
+    try { localStorage.setItem('minhastarefas_v2', JSON.stringify(tasks)); } catch(e) {}
+  }
+
+  function openModal() {
+    document.getElementById('modal-overlay').classList.add('open');
+    document.getElementById('task-title').focus();
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    resetForm();
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  }
+
+  function resetForm() {
+    document.getElementById('task-title').value = '';
+    selectedUrgency = '';
+    document.querySelectorAll('.urgency-opt').forEach(o => o.classList.remove('selected'));
+    document.getElementById('save-btn').className = 'save-btn';
+    showDate = false; showTime = false;
+    document.getElementById('toggle-date').classList.remove('on');
+    document.getElementById('toggle-time').classList.remove('on');
+    document.getElementById('date-input-wrap').classList.remove('visible');
+    document.getElementById('time-input-wrap').classList.remove('visible');
+    document.getElementById('task-date').value = '';
+    document.getElementById('task-time').value = '';
+  }
+
+  function selectUrgency(val) {
+    selectedUrgency = val;
+    document.querySelectorAll('.urgency-opt').forEach(o => {
+      o.classList.toggle('selected', o.dataset.val === val);
+    });
+    const btn = document.getElementById('save-btn');
+    btn.className = 'save-btn ' + val;
+  }
+
+  function toggleDate() {
+    showDate = !showDate;
+    document.getElementById('toggle-date').classList.toggle('on', showDate);
+    document.getElementById('date-input-wrap').classList.toggle('visible', showDate);
+    if (!showDate) {
+      document.getElementById('task-date').value = '';
+      if (showTime) { showTime = false; document.getElementById('toggle-time').classList.remove('on'); document.getElementById('time-input-wrap').classList.remove('visible'); }
+    }
+  }
+
+  function toggleTime() {
+    if (!showDate) { toggleDate(); }
+    showTime = !showTime;
+    document.getElementById('toggle-time').classList.toggle('on', showTime);
+    document.getElementById('time-input-wrap').classList.toggle('visible', showTime);
+    if (!showTime) document.getElementById('task-time').value = '';
+  }
+
+  function saveTask() {
+    const title = document.getElementById('task-title').value.trim();
+    if (!title) { document.getElementById('task-title').focus(); return; }
+    if (!selectedUrgency) {
+      document.querySelector('.urgency-grid').style.animation = 'none';
+      setTimeout(() => document.querySelector('.urgency-grid').style.animation = '', 100);
+      alert('Por favor, selecione o nível de urgência.');
+      return;
+    }
+    const task = {
+      id: Date.now(),
+      title,
+      urgency: selectedUrgency,
+      date: showDate ? document.getElementById('task-date').value : '',
+      time: (showDate && showTime) ? document.getElementById('task-time').value : '',
+      done: false,
+      created: new Date().toISOString()
+    };
+    tasks.unshift(task);
+    save();
+    render();
+    closeModal();
+  }
+
+  function toggleDone(id) {
+    const t = tasks.find(t => t.id === id);
+    if (t) { t.done = !t.done; save(); render(); }
+  }
+
+  function deleteTask(id) {
+    if (confirm('Remover esta tarefa?')) {
+      tasks = tasks.filter(t => t.id !== id);
+      save(); render();
+    }
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector('.filter-tab.' + (f === 'all' ? 'all' : f)).classList.add('active');
+    render();
+  }
+
+  function formatDate(date, time) {
+    if (!date) return '';
+    const d = new Date(date + 'T' + (time || '00:00') + ':00');
+    const now = new Date(); now.setHours(0,0,0,0);
+    const opts = { day: '2-digit', month: 'short' };
+    let str = d.toLocaleDateString('pt-BR', opts);
+    if (time) str += ' às ' + time;
+    const isOverdue = !time ? new Date(date) < now : d < new Date();
+    return { str, overdue: isOverdue };
+  }
+
+  function render() {
+    const list = document.getElementById('task-list');
+
+    const open = tasks.filter(t => !t.done);
+    const done = tasks.filter(t => t.done);
+
+    const filtered = (arr) => currentFilter === 'all' ? arr : arr.filter(t => t.urgency === currentFilter);
+
+    const urgOpen = open.filter(t => !t.done && t.urgency === 'urgente');
+    const impOpen = open.filter(t => !t.done && t.urgency === 'importante');
+    const depOpen = open.filter(t => !t.done && t.urgency === 'depois');
+
+    document.getElementById('stat-urgente').textContent = urgOpen.length;
+    document.getElementById('stat-importante').textContent = impOpen.length;
+    document.getElementById('stat-depois').textContent = depOpen.length;
+
+    const allOpen = filtered(open);
+    const allDone = filtered(done);
+
+    document.getElementById('count-all').textContent = open.length;
+    document.getElementById('count-urgente').textContent = urgOpen.length;
+    document.getElementById('count-importante').textContent = impOpen.length;
+    document.getElementById('count-depois').textContent = depOpen.length;
+
+    if (allOpen.length === 0 && allDone.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="emoji">✅</div><p>Nenhuma tarefa ainda.<br>Toque em <strong>Adicionar</strong> para começar!</p></div>`;
+      return;
+    }
+
+    let html = '';
+
+    const order = ['urgente', 'importante', 'depois'];
+
+    if (currentFilter === 'all') {
+      order.forEach(urg => {
+        const grp = open.filter(t => t.urgency === urg);
+        if (grp.length === 0) return;
+        const icons = { urgente: '🔴', importante: '🟡', depois: '🟢' };
+        const names = { urgente: 'Urgente', importante: 'Importante', depois: 'Pode esperar' };
+        html += `<div class="section-label">${icons[urg]} ${names[urg]}</div>`;
+        grp.forEach(t => html += renderCard(t));
+      });
+    } else {
+      allOpen.forEach(t => html += renderCard(t));
+    }
+
+    if (allDone.length > 0) {
+      html += `<div class="section-label">✔ Concluídas (${allDone.length})</div>`;
+      allDone.forEach(t => html += renderCard(t));
+    }
+
+    list.innerHTML = html;
+  }
+
+  function renderCard(t) {
+    const df = t.date ? formatDate(t.date, t.time) : null;
+    const dateHtml = df ? `<span class="task-date ${df.overdue && !t.done ? 'overdue' : ''}">📅 ${df.str}${df.overdue && !t.done ? ' ⚠️' : ''}</span>` : '';
+    const labels = { urgente: '🔴 Urgente', importante: '🟡 Importante', depois: '🟢 Pode esperar' };
+    return `<div class="task-card ${t.urgency}${t.done ? ' done' : ''}">
+      <div class="task-checkbox" onclick="toggleDone(${t.id})" role="button" aria-label="Marcar como concluída">
+        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+          <path d="M1 5l3.5 3.5L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="task-body">
+        <div class="task-title">${escHtml(t.title)}</div>
+        <div class="task-meta">
+          <span class="task-badge ${t.urgency}">${labels[t.urgency]}</span>
+          ${dateHtml}
+        </div>
+      </div>
+      <button class="task-delete" onclick="deleteTask(${t.id})" aria-label="Remover tarefa">✕</button>
+    </div>`;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function updateDate() {
+    const d = new Date();
+    const opts = { weekday: 'long', day: 'numeric', month: 'long' };
+    document.getElementById('date-display').textContent = d.toLocaleDateString('pt-BR', opts);
+  }
+
+  load();
+  updateDate();
+  render();
+  setInterval(updateDate, 60000);
+</script>
+</body>
+</html>
